@@ -1,42 +1,57 @@
 import { useEffect, useState } from "react";
 import { db, auth } from "../Backend/firebase";
-import { collection, getDocs } from "firebase/firestore";
-import { useNavigate } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
 
 const Dashboard = () => {
-  const [hospitals, setHospitals] = useState([]);
-  const navigate = useNavigate();
+  const [hospital, setHospital] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!auth.currentUser) navigate("/login");
+    const fetchHospitalData = async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        setError("User not authenticated.");
+        setLoading(false);
+        return;
+      }
 
-    const fetchHospitals = async () => {
-      const querySnapshot = await getDocs(collection(db, "hospitals"));
-      setHospitals(querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      try {
+        const docRef = doc(db, "hospitals", user.uid);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          setHospital(docSnap.data());
+        } else {
+          setError("Hospital data not found.");
+        }
+      } catch (err) {
+        setError("Error fetching data. Try again.");
+      } finally {
+        setLoading(false);
+      }
     };
 
-    fetchHospitals();
-  }, [navigate]);
+    fetchHospitalData();
+  }, []);
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <h2 className="text-3xl font-bold text-center text-blue-600">Hospital Dashboard</h2>
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {hospitals.map((hospital) => (
-          <div key={hospital.id} className="bg-white p-4 rounded-lg shadow-md">
-            <h3 className="text-xl font-semibold">{hospital.name}</h3>
-            <p className="text-gray-600"><strong>Location:</strong> {hospital.location}</p>
-            <p className="text-gray-600"><strong>Email:</strong> {hospital.email}</p>
-            <p className="text-gray-600"><strong>Phone:</strong> {hospital.phone}</p>
-            <p className="text-gray-600"><strong>Total Staff:</strong> {hospital.staff}</p>
-            <p className="text-gray-600"><strong>Total Doctors:</strong> {hospital.doctors}</p>
-            <p className="text-gray-600"><strong>Total ICU Beds:</strong> {hospital.icuBeds}</p>
-            <p className="text-gray-600"><strong>Available ICU Beds:</strong> {hospital.availableIcuBeds}</p>
-            <p className="text-gray-600"><strong>Total Ambulances:</strong> {hospital.ambulances}</p>
-            <p className="text-gray-600"><strong>Available Ambulances:</strong> {hospital.availableAmbulances}</p>
-          </div>
-        ))}
-      </div>
+    <div className="p-8">
+      <h2 className="text-3xl font-bold text-blue-600">Hospital Dashboard</h2>
+      {hospital && (
+        <div className="mt-4 bg-white p-6 rounded-lg shadow-md">
+          <p><strong>Name:</strong> {hospital.name}</p>
+          <p><strong>Email:</strong> {hospital.email}</p>
+          <p><strong>Location:</strong> {hospital.location}</p>
+          <p><strong>Phone:</strong> {hospital.phone}</p>
+          <p><strong>Doctors:</strong> {hospital.doctors}</p>
+          <p><strong>ICU Beds:</strong> {hospital.availableIcuBeds} / {hospital.icuBeds}</p>
+          <p><strong>Ambulances:</strong> {hospital.availableAmbulances} / {hospital.ambulances}</p>
+        </div>
+      )}
     </div>
   );
 };
