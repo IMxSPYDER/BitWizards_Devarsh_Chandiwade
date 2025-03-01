@@ -19,6 +19,7 @@ const AddPatient = ({ close }) => {
         ecgAbnormality: "",
         xrayFindings: "",
         ctScanFindings: "",
+        allocated: "",
     });
 
     const handleChange = (e) => {
@@ -55,7 +56,7 @@ const AddPatient = ({ close }) => {
     // };
     
     const handleAddPatient = async (patientData) => {
-        e.preventDefault();
+        patientData.preventDefault();
     
         try {
             // Add patient to Firebase
@@ -117,6 +118,8 @@ const AddPatient = ({ close }) => {
                     <input type="number" name="painLevel" placeholder="Pain Level (1-10)" className="border p-2 w-full my-2" onChange={handleChange} required />
                     <input type="text" name="consciousnessLevel" placeholder="Consciousness Level (e.g., Alert, Unconscious)" className="border p-2 w-full my-2" onChange={handleChange} required />
                     <input type="text" name="symptoms" placeholder="Symptoms (e.g., Chest Pain, Fever)" className="border p-2 w-full my-2" onChange={handleChange} required />
+                    <input type="text" name="resources" placeholder="Assigned Resources" className="border p-2 w-full my-2" onChange={handleChange} required />
+
                     <select name="ecgAbnormality" className="border p-2 w-full my-2" onChange={handleChange} required>
                         <option value="">ECG Abnormality</option>
                         <option value="0">Normal</option>
