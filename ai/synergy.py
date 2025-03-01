@@ -152,3 +152,106 @@ predicted_class = np.argmax(prediction)
 triage_priority = le_priority.inverse_transform([predicted_class])[0]
 
 print(f"\nPredicted Triage Priority: {triage_priority}")
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.utils.class_weight import compute_class_weight
+from sklearn.metrics import accuracy_score, classification_report
+from imblearn.over_sampling import SMOTE
+from sklearn.ensemble import RandomForestClassifier
+import joblib
+
+# Load dataset
+df = pd.read_csv("medical_analysis_data.csv")
+
+# Encode categorical target variable
+le_condition = LabelEncoder()
+df["Condition"] = le_condition.fit_transform(df["Condition"])
+
+# Define features and target
+X = df.drop(columns=["Condition"])
+y = df["Condition"]
+
+# Handle class imbalance using SMOTE
+smote = SMOTE(random_state=42)
+X_resampled, y_resampled = smote.fit_resample(X, y)
+
+# Split dataset
+X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=42)
+
+# Scale features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Train RandomForest model
+model = RandomForestClassifier(n_estimators=200, random_state=42, class_weight='balanced')
+model.fit(X_train, y_train)
+
+# Evaluate model
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+print("Classification Report:\n", classification_report(y_test, y_pred))
+
+# Save model and preprocessing objects
+joblib.dump(model, "medical_condition_model.pkl")
+joblib.dump(le_condition, "le_condition.pkl")
+joblib.dump(scaler, "scaler.pkl")
+
+# Feature importance plot
+feature_importances = model.feature_importances_
+plt.figure(figsize=(10, 5))
+plt.bar(range(len(feature_importances)), feature_importances)
+plt.xlabel("Feature Index")
+plt.ylabel("Importance")
+plt.title("Feature Importance in RandomForest Model")
+plt.show()
+
+import numpy as np
+import pandas as pd
+import joblib
+import tensorflow as tf
+from tensorflow.keras.models import load_model
+
+# Load saved model and preprocessing objects
+model = load_model("medical_condition_model.h5")
+scaler = joblib.load("scaler.pkl")
+le_condition = joblib.load("le_condition.pkl")
+
+# Function to take user input and make predictions
+def predict_condition():
+    print("Enter the following patient details:")
+    heart_rate = float(input("Heart Rate (bpm): "))
+    oxygen_saturation = float(input("Oxygen Saturation (%): "))
+    respiratory_rate = float(input("Respiratory Rate (breaths per min): "))
+    blood_pressure_systolic = float(input("Systolic Blood Pressure (mmHg): "))
+    blood_pressure_diastolic = float(input("Diastolic Blood Pressure (mmHg): "))
+    ecg_abnormality = int(input("ECG Abnormality (0 = Normal, 1 = Abnormal): "))
+    xray_findings = int(input("X-ray Findings (0 = Normal, 1 = Minor Issue, 2 = Critical Issue): "))
+    ct_scan_findings = int(input("CT Scan Findings (0 = Normal, 1 = Minor Issue, 2 = Critical Issue): "))
+
+    # Create input array
+    user_data = np.array([[
+        heart_rate, oxygen_saturation, respiratory_rate,
+        blood_pressure_systolic, blood_pressure_diastolic,
+        ecg_abnormality, xray_findings, ct_scan_findings
+    ]])
+
+    # Scale input data
+    user_data = scaler.transform(user_data)
+
+    # Predict condition
+    prediction = model.predict(user_data)
+    predicted_class = np.argmax(prediction, axis=1)[0]
+    predicted_condition = le_condition.inverse_transform([predicted_class])[0]
+
+    print("\nPredicted Medical Condition:", predicted_condition)
+    print("Confidence Levels:", prediction[0])
+
+# Run prediction function
+if __name__ == "__main__":
+    predict_condition()
