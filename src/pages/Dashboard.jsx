@@ -1,59 +1,118 @@
-import { useEffect, useState } from "react";
-import { db, auth } from "../Backend/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import { collection, getDocs, doc, getDoc, addDoc } from "firebase/firestore";
+import { db, auth } from "../Backend/firebase"; // Ensure correct import
+import { onAuthStateChanged } from "firebase/auth";
+import AddPatient from "./AddPatient";
+import AddAmbulance from "./AddAmbulance";
 
 const Dashboard = () => {
-  const [hospital, setHospital] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+    const [hospitalName, setHospitalName] = useState("Hospital Dashboard");
+    const [patients, setPatients] = useState([]);
+    const [ambulances, setAmbulances] = useState([]);
+    const [staff, setStaff] = useState([]);
+    const [beds, setBeds] = useState(0);
 
-  useEffect(() => {
-    const fetchHospitalData = async () => {
-      const user = auth.currentUser;
-      if (!user) {
-        setError("User not authenticated.");
-        setLoading(false);
-        return;
-      }
+    // Pop-up form states
+    const [showPatientForm, setShowPatientForm] = useState(false);
+    const [showAmbulanceForm, setShowAmbulanceForm] = useState(false);
+    const [showStaffForm, setShowStaffForm] = useState(false);
 
-      try {
-        const docRef = doc(db, "hospitals", user.uid);
-        const docSnap = await getDoc(docRef);
+    // Fetch Hospital Name
+    useEffect(() => {
+        const fetchHospitalName = async (uid) => {
+            if (!uid) return;
+            const hospitalRef = doc(db, "hospitals", uid);
+            const hospitalSnap = await getDoc(hospitalRef);
+            if (hospitalSnap.exists()) {
+                setHospitalName(hospitalSnap.data().name);
+            }
+        };
 
-        if (docSnap.exists()) {
-          setHospital(docSnap.data());
-        } else {
-          setError("Hospital data not found.");
-        }
-      } catch (err) {
-        setError("Error fetching data. Try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                fetchHospitalName(user.uid);
+            } else {
+                setHospitalName("Hospital Dashboard");
+            }
+        });
 
-    fetchHospitalData();
-  }, []);
+        return () => unsubscribe();
+    }, []);
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
+    // Fetch data from Firebase
+    useEffect(() => {
+        const fetchData = async () => {
+            const patientSnapshot = await getDocs(collection(db, "patients"));
+            setPatients(patientSnapshot.docs.map(doc => doc.data()));
 
-  return (
-    <div className="p-8">
-      <h2 className="text-3xl font-bold text-blue-600">Hospital Dashboard</h2>
-      {hospital && (
-        <div className="mt-4 bg-white p-6 rounded-lg shadow-md">
-          <p><strong>Name:</strong> {hospital.name}</p>
-          <p><strong>Email:</strong> {hospital.email}</p>
-          <p><strong>Location:</strong> {hospital.location}</p>
-          <p><strong>Phone:</strong> {hospital.phone}</p>
-          <p><strong>Doctors:</strong> {hospital.doctors}</p>
-          <p><strong>ICU Beds:</strong> {hospital.availableIcuBeds} / {hospital.icuBeds}</p>
-          <p><strong>Ambulances:</strong> {hospital.availableAmbulances} / {hospital.ambulances}</p>
+            const ambulanceSnapshot = await getDocs(collection(db, "ambulances"));
+            setAmbulances(ambulanceSnapshot.docs.map(doc => doc.data()));
+
+            const staffSnapshot = await getDocs(collection(db, "staff"));
+            setStaff(staffSnapshot.docs.map(doc => doc.data()));
+
+            const bedsSnapshot = await getDocs(collection(db, "beds"));
+            setBeds(bedsSnapshot.docs.length);
+        };
+        fetchData();
+    }, []);
+
+    return (
+        <div className="p-5">
+            <h1 className="text-3xl font-bold">Welcome, {hospitalName}!</h1>
+
+            {/* Stats Overview */}
+            <div className="grid grid-cols-4 gap-5 my-5">
+                <StatCard title="Total Patients" count={patients.length} color="bg-blue-500" />
+                <StatCard title="Total Ambulances" count={ambulances.length} color="bg-red-500" />
+                <StatCard title="Total Staff" count={staff.length} color="bg-green-500" />
+                <StatCard title="Available Beds" count={beds} color="bg-yellow-500" />
+            </div>
+
+            {/* Open Pop-up Forms */}
+            <div className="flex gap-5 my-5">
+                <button className="bg-blue-500 text-white px-5 py-2 rounded" onClick={() => setShowPatientForm(true)}>Add Patient</button>
+                <button className="bg-red-500 text-white px-5 py-2 rounded" onClick={() => setShowAmbulanceForm(true)}>Add Ambulance</button>
+                <button className="bg-green-500 text-white px-5 py-2 rounded" onClick={() => setShowStaffForm(true)}>Add Staff</button>
+            </div>
+
+            {/* Patient List */}
+            <h2 className="text-2xl font-bold mt-5">Patient List</h2>
+            <table className="w-full mt-3 border">
+                <thead>
+                    <tr className="bg-gray-300">
+                        <th className="p-2 border">Name</th>
+                        <th className="p-2 border">Age</th>
+                        <th className="p-2 border">Condition</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {patients.map((patient, index) => (
+                        <tr key={index} className="border">
+                            <td className="p-2 border">{patient.name}</td>
+                            <td className="p-2 border">{patient.age}</td>
+                            <td className="p-2 border">{patient.condition}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+
+            {/* Pop-up Forms */}
+            {showPatientForm && <AddPatient close={() => setShowPatientForm(false)} />}
+            {showAmbulanceForm && <AddAmbulance close={() => setShowAmbulanceForm(false)} />}
+            {showStaffForm && <AddStaff close={() => setShowStaffForm(false)} />}
         </div>
-      )}
-    </div>
-  );
+    );
 };
+
+// Reusable Stat Card Component
+const StatCard = ({ title, count, color }) => (
+    <div className={`p-5 rounded-md text-white ${color}`}>
+        <h2 className="text-xl">{title}</h2>
+        <p className="text-3xl font-bold">{count}</p>
+    </div>
+);
+
+
 
 export default Dashboard;
