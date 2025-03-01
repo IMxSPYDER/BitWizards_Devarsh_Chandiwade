@@ -20,6 +20,16 @@ const Dashboard = () => {
     const [showAmbulanceForm, setShowAmbulanceForm] = useState(false);
     const [showStaffForm, setShowStaffForm] = useState(false);
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const rowsPerPage = 5;
+
+    const totalPages = Math.ceil(patients.length / rowsPerPage);
+
+    const currentPatients = patients.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage
+    );
+
 
     // Fetch Hospital Name
     useEffect(() => {
@@ -129,53 +139,72 @@ const handlePatientClick = async (patient) => {
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-100">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Patient</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Age</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase">Patient Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase">Age</th>
                             {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Condition</th> */}
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase">Status</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                        {patients.length > 0 ? (
-                            patients.map((patient, index) => (
-                                <tr 
-                                    key={index} 
-                                    className="bg-white hover:bg-gray-50 cursor-pointer"
-                                    onClick={() => handlePatientClick(patient)}
-                                >
-                                    <td className="px-6 py-4 whitespace-nowrap flex items-center">
-                                        <div className="h-10 w-10 flex items-center justify-center bg-gray-300 text-gray-700 font-semibold rounded-full">
-                                            {patient.name ? patient.name.split(" ").map(n => n[0]).join("") : "?"}
-                                        </div>
-                                        <div className="ml-3">
-                                            <p className="text-sm font-medium text-gray-900">{patient.name}</p>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{patient.age}</td>
-                                    {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{patient.xRayFindings}</td> */}
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                                            patient.painLevel >= 8 ? "bg-red-100 text-red-800" :
-                                            patient.painLevel === "Waiting" ? "bg-yellow-100 text-yellow-800" :
-                                            patient.painLevel === "Scheduled" ? "bg-blue-100 text-blue-800" :
-                                            patient.painLevel === "Cancelled" ? "bg-red-100 text-red-800" :
-                                            "bg-gray-100 text-gray-800"
-                                        }`}>
-                                            {patient.painLevel}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan="4" className="px-6 py-4 text-center text-gray-500">
-                                    No patients found.
+                    {currentPatients.length > 0 ? (
+                        currentPatients.map((patient, index) => (
+                            <tr 
+                                key={index} 
+                                className="bg-white hover:bg-gray-50 cursor-pointer"
+                                onClick={() => handlePatientClick(patient)}
+                            >
+                                <td className="px-6 py-4 whitespace-nowrap flex items-center">
+                                    <div className="h-10 w-10 flex items-center justify-center bg-gray-300 text-gray-700 font-semibold rounded-full">
+                                        {patient.name ? patient.name.split(" ").map(n => n[0]).join("") : "?"}
+                                    </div>
+                                    <div className="ml-3">
+                                        <p className="text-sm font-medium text-gray-900">{patient.name}</p>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{patient.age}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                                        patient.painLevel >= 8 ? "bg-red-100 text-red-800" :
+                                        patient.painLevel === "Waiting" ? "bg-yellow-100 text-yellow-800" :
+                                        patient.painLevel === "Scheduled" ? "bg-blue-100 text-blue-800" :
+                                        patient.painLevel === "Cancelled" ? "bg-red-100 text-red-800" :
+                                        "bg-gray-100 text-gray-800"
+                                    }`}>
+                                        {patient.painLevel}
+                                    </span>
                                 </td>
                             </tr>
-                        )}
-                    </tbody>
+                        ))
+                    ) : (
+                        <tr>
+                            <td colSpan="4" className="px-6 py-4 text-center text-gray-500">
+                                No patients found.
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
                 </table>
             </div>
+
+            {/* Pagination Controls */}
+        <div className="flex justify-between mt-4">
+            <button 
+                className={`px-4 py-2 bg-gray-300 text-gray-700 rounded ${currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""}`} 
+                onClick={() => setCurrentPage(currentPage - 1)} 
+                disabled={currentPage === 1}
+            >
+                Previous
+            </button>
+            <span className="px-4 py-2">Page {currentPage} of {totalPages}</span>
+            <button 
+                className={`px-4 py-2 bg-gray-300 text-gray-700 rounded ${currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""}`} 
+                onClick={() => setCurrentPage(currentPage + 1)} 
+                disabled={currentPage === totalPages}
+            >
+                Next
+            </button>
+        </div>
+
             {/* Pop-up Forms */}
             {showPatientForm && <AddPatient close={() => setShowPatientForm(false)} />}
             {showAmbulanceForm && <AddAmbulance close={() => setShowAmbulanceForm(false)} />}

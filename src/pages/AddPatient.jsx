@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "../Backend/firebase";
+import axios from "axios";
 
 const AddPatient = ({ close }) => {
     const [patientData, setPatientData] = useState({
@@ -24,13 +25,82 @@ const AddPatient = ({ close }) => {
         setPatientData({ ...patientData, [e.target.name]: e.target.value });
     };
 
-    const handleAddPatient = async (e) => {
+    // const handleAddPatient = async (e) => {
+    //     e.preventDefault();
+    
+    //     try {
+    //         // Add patient to Firebase
+    //         const docRef = await addDoc(collection(db, "patients"), patientData);
+    //         console.log("Patient added with ID: ", docRef.id);
+    
+    //         // Send patient data to the API
+    //         const response = await axios.post("https://4a6b-34-87-80-170.ngrok-free.app/predict", {
+    //             e : e
+    //         });
+    //         console.log(response.data)
+    
+    //         if (!response.ok) {
+    //             throw new Error("Failed to get prediction");
+    //         }
+    
+    //         const predictionData = await response.json();
+    //         console.log("Prediction Response: ", predictionData);
+    
+    //         alert("Patient added and prediction received!");
+    //         close();
+    //     } catch (error) {
+    //         console.error("Error adding patient: ", error);
+    //         alert("Error adding patient or fetching prediction.");
+    //     }
+    // };
+    
+    const handleAddPatient = async (patientData) => {
         e.preventDefault();
-        await addDoc(collection(db, "patients"), patientData);
-        alert("Patient added!");
-        close();
-    };
+    
+        try {
+            // Add patient to Firebase
+            const docRef = await addDoc(collection(db, "patients"), patientData);
+            console.log("Patient added with ID: ", docRef.id);
+    
+            // Transform patientData to match API format
+            // const apiPayload = {
+            //     features: [
+            //         parseFloat(patientData.age),              // Age
+            //         parseFloat(patientData.heartRate),       // Heart Rate
+            //         parseFloat(patientData.systolicBP),      // Systolic BP
+            //         parseFloat(patientData.diastolicBP),     // Diastolic BP
+            //         parseFloat(patientData.respiratoryRate), // Respiratory Rate
+            //         parseFloat(patientData.oxygenSaturation),// Oxygen Saturation
+            //         parseFloat(patientData.temperature),     // Temperature
+            //         parseFloat(patientData.painLevel),       // Pain Level
+            //         parseFloat(patientData.ecgAbnormality),  // ECG Abnormality
+            //         parseFloat(patientData.xrayFindings),    // X-ray Findings
+            //         parseFloat(patientData.ctScanFindings),  // CT Scan Findings
+            //     ]
+                    //    };
 
+            
+    
+            // Send transformed data to API
+            const response = await axios.post(
+                "https://4a6b-34-87-80-170.ngrok-free.app/predict",
+                { patientData: patientData }
+            );
+    
+            console.log("Prediction Response: ", response.data);
+    
+            if (!response.data) {
+                throw new Error("No response data received from the prediction API.");
+            }
+    
+            alert("Patient added and prediction received!");
+            close();
+        } catch (error) {
+            console.error("Error adding patient: ", error.response ? error.response.data : error.message);
+            alert("Error adding patient or fetching prediction.");
+        }
+    };
+    
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
             <div className="bg-white h-[90%] overflow-auto p-5 rounded-md w-96">
