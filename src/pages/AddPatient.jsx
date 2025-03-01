@@ -1,30 +1,69 @@
-import { addDoc, collection } from "firebase/firestore";
-import { useState } from "react";
-import { db} from "../Backend/firebase"; // Ensure correct import
-
+import React, { useState } from "react";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "../Backend/firebase";
 
 const AddPatient = ({ close }) => {
-    const [name, setName] = useState("");
-    const [age, setAge] = useState("");
-    const [condition, setCondition] = useState("");
+    const [patientData, setPatientData] = useState({
+        name: "",
+        age: "",
+        heartRate: "",
+        systolicBP: "",
+        diastolicBP: "",
+        respiratoryRate: "",
+        oxygenSaturation: "",
+        temperature: "",
+        painLevel: "",
+        consciousnessLevel: "",
+        symptoms: "",
+        ecgAbnormality: "",
+        xrayFindings: "",
+        ctScanFindings: "",
+    });
+
+    const handleChange = (e) => {
+        setPatientData({ ...patientData, [e.target.name]: e.target.value });
+    };
 
     const handleAddPatient = async (e) => {
         e.preventDefault();
-        if (!name || !age || !condition) return alert("All fields are required");
-
-        await addDoc(collection(db, "patients"), { name, age, condition });
+        await addDoc(collection(db, "patients"), patientData);
         alert("Patient added!");
         close();
     };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-            <div className="bg-white p-5 rounded-md w-96">
+            <div className="bg-white h-[90%] overflow-auto p-5 rounded-md w-96">
                 <h2 className="text-xl font-bold">Add Patient</h2>
                 <form onSubmit={handleAddPatient}>
-                    <input type="text" className="border p-2 w-full my-2" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-                    <input type="number" className="border p-2 w-full my-2" placeholder="Age" value={age} onChange={(e) => setAge(e.target.value)} />
-                    <input type="text" className="border p-2 w-full my-2" placeholder="Condition" value={condition} onChange={(e) => setCondition(e.target.value)} />
+                    <input type="text" name="name" placeholder="Name" className="border p-2 w-full my-2" onChange={handleChange} required />
+                    <input type="number" name="age" placeholder="Age" className="border p-2 w-full my-2" onChange={handleChange} required />
+                    <input type="number" name="heartRate" placeholder="Heart Rate (bpm)" className="border p-2 w-full my-2" onChange={handleChange} required />
+                    <input type="number" name="systolicBP" placeholder="Systolic Blood Pressure (mmHg)" className="border p-2 w-full my-2" onChange={handleChange} required />
+                    <input type="number" name="diastolicBP" placeholder="Diastolic Blood Pressure (mmHg)" className="border p-2 w-full my-2" onChange={handleChange} required />
+                    <input type="number" name="respiratoryRate" placeholder="Respiratory Rate (breaths per min)" className="border p-2 w-full my-2" onChange={handleChange} required />
+                    <input type="number" name="oxygenSaturation" placeholder="Oxygen Saturation (%)" className="border p-2 w-full my-2" onChange={handleChange} required />
+                    <input type="number" name="temperature" placeholder="Temperature (°F)" className="border p-2 w-full my-2" onChange={handleChange} required />
+                    <input type="number" name="painLevel" placeholder="Pain Level (1-10)" className="border p-2 w-full my-2" onChange={handleChange} required />
+                    <input type="text" name="consciousnessLevel" placeholder="Consciousness Level (e.g., Alert, Unconscious)" className="border p-2 w-full my-2" onChange={handleChange} required />
+                    <input type="text" name="symptoms" placeholder="Symptoms (e.g., Chest Pain, Fever)" className="border p-2 w-full my-2" onChange={handleChange} required />
+                    <select name="ecgAbnormality" className="border p-2 w-full my-2" onChange={handleChange} required>
+                        <option value="">ECG Abnormality</option>
+                        <option value="0">Normal</option>
+                        <option value="1">Abnormal</option>
+                    </select>
+                    <select name="xrayFindings" className="border p-2 w-full my-2" onChange={handleChange} required>
+                        <option value="">X-ray Findings</option>
+                        <option value="0">Normal</option>
+                        <option value="1">Minor Issue</option>
+                        <option value="2">Critical Issue</option>
+                    </select>
+                    <select name="ctScanFindings" className="border p-2 w-full my-2" onChange={handleChange} required>
+                        <option value="">CT Scan Findings</option>
+                        <option value="0">Normal</option>
+                        <option value="1">Minor Issue</option>
+                        <option value="2">Critical Issue</option>
+                    </select>
                     <div className="flex justify-between">
                         <button type="button" className="bg-gray-400 px-3 py-2 rounded" onClick={close}>Close</button>
                         <button className="bg-blue-500 text-white px-3 py-2 rounded">Add</button>

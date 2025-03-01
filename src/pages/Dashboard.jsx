@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, addDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { db, auth } from "../Backend/firebase"; // Ensure correct import
 import { onAuthStateChanged } from "firebase/auth";
 import AddPatient from "./AddPatient";
 import AddAmbulance from "./AddAmbulance";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import axios from "axios";
+import TreatmentPopup from "./TreatmentPopup";
+
 
 const Dashboard = () => {
     const [hospitalName, setHospitalName] = useState("Hospital Dashboard");
@@ -12,10 +16,10 @@ const Dashboard = () => {
     const [staff, setStaff] = useState([]);
     const [beds, setBeds] = useState(0);
 
-    // Pop-up form states
     const [showPatientForm, setShowPatientForm] = useState(false);
     const [showAmbulanceForm, setShowAmbulanceForm] = useState(false);
     const [showStaffForm, setShowStaffForm] = useState(false);
+
 
     // Fetch Hospital Name
     useEffect(() => {
@@ -56,6 +60,49 @@ const Dashboard = () => {
         };
         fetchData();
     }, []);
+ // Import pop-up component
+
+const [selectedTreatment, setSelectedTreatment] = useState(null);
+
+const handlePatientClick = async (patient) => {
+    const prompt = `
+        The following patient needs urgent medical attention. Suggest a treatment plan based on these vitals:
+
+        - **Heart Rate (bpm):** ${patient.heartRate}
+        - **Oxygen Saturation (%):** ${patient.oxygenSaturation}
+        - **Respiratory Rate (breaths per min):** ${patient.respiratoryRate}
+        - **Systolic Blood Pressure (mmHg):** ${patient.systolicBloodPressure}
+        - **Diastolic Blood Pressure (mmHg):** ${patient.diastolicBloodPressure}
+        - **ECG Abnormality (0 = Normal, 1 = Abnormal):** ${patient.ecgAbnormality}
+        - **X-ray Findings (0 = Normal, 1 = Minor Issue, 2 = Critical Issue):** ${patient.xRayFindings}
+        - **CT Scan Findings (0 = Normal, 1 = Minor Issue, 2 = Critical Issue):** ${patient.ctScanFindings}
+        - **Age:** ${patient.age}
+        - **Temperature (°F):** ${patient.temperature}
+        - **Pain Level (1-10):** ${patient.painLevel}
+        - **Consciousness Level:** ${patient.consciousnessLevel}
+        - **Symptoms:** ${patient.symptoms}
+
+        Provide a treatment recommendation based on this information.
+    `;
+
+    try {
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+        const API_KEY = "AIzaSyC7S_WFAh3E0bpnkSPcRhRS_HEsdjmRxwI"; // Replace this with your actual API key
+
+        const genAI = new GoogleGenerativeAI("AIzaSyC7S_WFAh3E0bpnkSPcRhRS_HEsdjmRxwI");
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+        const response = await model.generateContent(prompt);
+        const treatmentText = response.response.candidates[0].content.parts[0].text;
+        console.log(treatmentText)
+
+        setSelectedTreatment(treatmentText);
+    } catch (error) {
+        console.error("Error fetching treatment:", error);
+        setSelectedTreatment("Error fetching treatment. Please try again.");
+    }
+};
+
 
     return (
         <div className="p-5">
@@ -76,31 +123,69 @@ const Dashboard = () => {
                 <button className="bg-green-500 text-white px-5 py-2 rounded" onClick={() => setShowStaffForm(true)}>Add Staff</button>
             </div>
 
-            {/* Patient List */}
-            <h2 className="text-2xl font-bold mt-5">Patient List</h2>
-            <table className="w-full mt-3 border">
-                <thead>
-                    <tr className="bg-gray-300">
-                        <th className="p-2 border">Name</th>
-                        <th className="p-2 border">Age</th>
-                        <th className="p-2 border">Condition</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {patients.map((patient, index) => (
-                        <tr key={index} className="border">
-                            <td className="p-2 border">{patient.name}</td>
-                            <td className="p-2 border">{patient.age}</td>
-                            <td className="p-2 border">{patient.condition}</td>
+            {/* Patient Table */}
+            <h2 className="text-2xl font-bold mt-5 mb-3">Recent Patients</h2>
+            <div className="bg-white shadow-md rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-100">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Patient</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Age</th>
+                            {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Condition</th> */}
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Status</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
-
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                        {patients.length > 0 ? (
+                            patients.map((patient, index) => (
+                                <tr 
+                                    key={index} 
+                                    className="bg-white hover:bg-gray-50 cursor-pointer"
+                                    onClick={() => handlePatientClick(patient)}
+                                >
+                                    <td className="px-6 py-4 whitespace-nowrap flex items-center">
+                                        <div className="h-10 w-10 flex items-center justify-center bg-gray-300 text-gray-700 font-semibold rounded-full">
+                                            {patient.name ? patient.name.split(" ").map(n => n[0]).join("") : "?"}
+                                        </div>
+                                        <div className="ml-3">
+                                            <p className="text-sm font-medium text-gray-900">{patient.name}</p>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{patient.age}</td>
+                                    {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{patient.xRayFindings}</td> */}
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                                            patient.painLevel >= 8 ? "bg-red-100 text-red-800" :
+                                            patient.painLevel === "Waiting" ? "bg-yellow-100 text-yellow-800" :
+                                            patient.painLevel === "Scheduled" ? "bg-blue-100 text-blue-800" :
+                                            patient.painLevel === "Cancelled" ? "bg-red-100 text-red-800" :
+                                            "bg-gray-100 text-gray-800"
+                                        }`}>
+                                            {patient.painLevel}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="4" className="px-6 py-4 text-center text-gray-500">
+                                    No patients found.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
             {/* Pop-up Forms */}
             {showPatientForm && <AddPatient close={() => setShowPatientForm(false)} />}
             {showAmbulanceForm && <AddAmbulance close={() => setShowAmbulanceForm(false)} />}
             {showStaffForm && <AddStaff close={() => setShowStaffForm(false)} />}
+            {selectedTreatment && (
+            <TreatmentPopup 
+                treatment={selectedTreatment} 
+                close={() => setSelectedTreatment(null)} 
+            />
+)}
         </div>
     );
 };
@@ -112,7 +197,5 @@ const StatCard = ({ title, count, color }) => (
         <p className="text-3xl font-bold">{count}</p>
     </div>
 );
-
-
 
 export default Dashboard;
