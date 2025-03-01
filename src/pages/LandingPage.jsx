@@ -17,7 +17,7 @@ function LandingPage() {
                 <Link href="/dashboard" className="text-sm font-medium hover:underline">Dashboard</Link>
               </nav>
               <div className="ml-4">
-                <Link to="/login" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                <Link to="/login" className="px-4 py-2 text-align-center bg-blue-600 font-medium text-white rounded-md hover:bg-blue-700">
                   Login
                 </Link>
               </div>
