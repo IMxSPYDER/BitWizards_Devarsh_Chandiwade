@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { db, auth } from "../Backend/firebase"; // Ensure correct import
 import { onAuthStateChanged } from "firebase/auth";
 import { Pie } from "react-chartjs-2";
@@ -15,7 +15,7 @@ import AddStaff from "./AddStaff";
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const Dashboard = () => {
-  const [hospitalName, setHospitalName] = useState("Hospital Dashboard");
+  const [hospitalName, setHospitalName] = useState("");
   const [patients, setPatients] = useState([]);
   const [ambulances, setAmbulances] = useState([]);
   const [staff, setStaff] = useState([]);
