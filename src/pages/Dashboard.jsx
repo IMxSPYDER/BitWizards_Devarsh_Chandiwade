@@ -175,10 +175,10 @@ const Dashboard = () => {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-4 gap-5 my-5">
-        <StatCard title="Total Patients" count={patients.length} color="bg-blue-500" />
-        <StatCard title="Total Ambulances" count={ambulances.length} color="bg-red-500" />
-        <StatCard title="Total Staff" count={staff.length} color="bg-green-500" />
-        <StatCard title="Available Beds" count={"150"} color="bg-yellow-500" />
+        <StatCard title="Total Patients" count={patients.length} color="bg-blue-500" smalls={"+15% from yesterday"}/>
+        <StatCard title="Total Ambulances" count={ambulances.length} color="bg-red-500" smalls={"+15% from yesterday"}/>
+        <StatCard title="Total Staff" count={staff.length} color="bg-green-500" smalls={"+15% from yesterday"}/>
+        <StatCard title="Available Beds" count={"150"} color="bg-yellow-500" smalls={"+15% from yesterday"}/>
       </div>
 
       {/* Charts Section */}
@@ -261,10 +261,11 @@ const Dashboard = () => {
   );
 };
 
-const StatCard = ({ title, count, color }) => (
+const StatCard = ({ title, count, color, smalls }) => (
   <div className={`p-5 rounded-md text-white ${color}`}>
     <h2 className="text-xl">{title}</h2>
     <p className="text-3xl font-bold">{count}</p>
+    <small className="text-xs">+15% from yesterday{smalls}</small>
   </div>
 );
 
