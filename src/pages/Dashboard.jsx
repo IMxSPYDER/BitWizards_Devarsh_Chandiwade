@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { deleteDoc } from "firebase/firestore";
 import AddStaff from "./AddStaff";
 import axios from "axios"; // Import axios to make POST requests
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 ChartJS.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 
@@ -164,6 +165,57 @@ const Dashboard = () => {
     }
   };
 
+  const [selectedTreatment, setSelectedTreatment] = useState(null);
+  const [loadingTreatment, setLoadingTreatment] = useState(false);
+
+
+  const handlePatientClick = async (patient) => {
+    setLoadingTreatment(true); // Start loading
+  setSelectedTreatment(null); // Reset previous treatm
+    const prompt = 
+        `The following patient needs urgent medical attention. Suggest a treatment plan based on these vitals:
+
+        - **Heart Rate (bpm):** ${patient.heartRate}
+        - **Oxygen Saturation (%):** ${patient.oxygenSaturation}
+        - **Respiratory Rate (breaths per min):** ${patient.respiratoryRate}
+        - **Systolic Blood Pressure (mmHg):** ${patient.systolicBloodPressure}
+        - **Diastolic Blood Pressure (mmHg):** ${patient.diastolicBloodPressure}
+        - **ECG Abnormality (0 = Normal, 1 = Abnormal):** ${patient.ecgAbnormality}
+        - **X-ray Findings (0 = Normal, 1 = Minor Issue, 2 = Critical Issue):** ${patient.xRayFindings}
+        - **CT Scan Findings (0 = Normal, 1 = Minor Issue, 2 = Critical Issue):** ${patient.ctScanFindings}
+        - **Age:** ${patient.age}
+        - **Temperature (°F):** ${patient.temperature}
+        - **Pain Level (1-10):** ${patient.painLevel}
+        - **Consciousness Level:** ${patient.consciousnessLevel}
+        - **Symptoms:** ${patient.symptoms}
+
+        Provide a treatment recommendation based on this information.`
+    ;
+
+    try {
+      const API_URL =
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+      const API_KEY = "AIzaSyC7S_WFAh3E0bpnkSPcRhRS_HEsdjmRxwI"; // Replace this with your actual API key
+
+      const genAI = new GoogleGenerativeAI(
+        "AIzaSyC7S_WFAh3E0bpnkSPcRhRS_HEsdjmRxwI"
+      );
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+      const response = await model.generateContent(prompt);
+      const treatmentText =
+        response.response.candidates[0].content.parts[0].text;
+      console.log(treatmentText);
+
+      setSelectedTreatment(treatmentText);
+    } catch (error) {
+      console.error("Error fetching treatment:", error);
+      setSelectedTreatment("Error fetching treatment. Please try again.");
+    }  finally {
+        setLoadingTreatment(false); // Stop loading
+      }
+  };
+
   return (
     <div className="p-5">
       <div className="flex justify-between">
@@ -249,7 +301,9 @@ const Dashboard = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {patient.triageLevel || "No treatment suggested"}
                   </td>
+                  
                 </tr>
+                
               ))
             ) : (
               <tr>
@@ -258,6 +312,8 @@ const Dashboard = () => {
                 </td>
               </tr>
             )}
+
+            
           </tbody>
         </table>
       </div>
@@ -293,6 +349,13 @@ const Dashboard = () => {
       {showPatientForm && <AddPatient close={() => setShowPatientForm(false)} />}
       {showAmbulanceForm && <AddAmbulance close={() => setShowAmbulanceForm(false)} />}
       {showStaffForm && <AddStaff close={() => setShowStaffForm(false)} />}
+      {showStaffForm && <AddStaff close={() => setShowStaffForm(false)} />}
+      {selectedTreatment && (
+        <TreatmentPopup
+          treatment={selectedTreatment}
+          close={() => setSelectedTreatment(null)}
+        />
+      )}
     </div>
   );
 };
