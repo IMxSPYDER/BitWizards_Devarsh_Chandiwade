@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import { Activity, Calendar, Clock, Users } from "lucide-react";
 import {Link} from 'react-router-dom'
-
+import image from '../assets/land.png'
 import { useTranslation } from "react-i18next";
 
 // Contains the value and text for the options
 const languages = [
-    { value: "", text: "Options" },
+    { value: "", text: "Select Language" },
     { value: "en", text: "English" },
     { value: "hi", text: "Hindi" },
     { value: "bn", text: "Bengali" },
@@ -63,23 +63,27 @@ function LandingPage() {
             </div>
           </header>
           <main className="flex-1">
-            <section className="w-full py-12 md:py-24 lg:py-32 bg-gray-100">
-              <div className="container mx-auto px-4 text-center">
-                <h1 className="text-4xl font-bold sm:text-5xl">{t("Secure Healthcare Management")}</h1>
-                <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-                  {t("Manage patient records, schedule appointments, and track healthcare metrics with our HIPAA-compliant platform.")}
-                </p>
-                <div className="mt-6 flex justify-center gap-4">
-                  <Link to="/register" className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                    {t("Get Started")}
-                  </Link>
-                  <Link href="/about" className="px-6 py-3 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white">
-                    {t("Learn More")}
-                  </Link>
-                </div>
-              </div>
-            </section>
-            <section className="w-full py-12 md:py-24 lg:py-32">
+          <section className="w-full px-10 flex flex-col md:flex-row items-center justify-center gap-8 py-12 md:py-24 lg:py-32 bg-gray-100 mx-auto text-center">
+        <div className="container px-4 w-full md:w-1/2 flex flex-col items-center md:items-start text-center md:text-left">
+            <h1 className="text-4xl font-bold sm:text-5xl">{t("Secure Healthcare Management")}</h1>
+            <p className="mt-4 text-lg text-gray-600 max-w-2xl">
+            {t("Manage patient records, schedule appointments, and track healthcare metrics with our HIPAA-compliant platform.")}
+            </p>
+            <div className="mt-6 flex flex-col sm:flex-row justify-center md:justify-start gap-4">
+            <Link to="/register" className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                {t("Get Started")}
+            </Link>
+            <a href="#about" className="px-6 py-3 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white">
+                {t("Learn More")}
+            </a>
+            </div>
+        </div>
+        <div className="w-full md:w-1/2 flex justify-center">
+            <img src={image} className="h-[350px] w-[350px]" alt="" />
+        </div>
+        </section>
+
+            <section id='about' className="w-full py-12 md:py-24 lg:py-32">
               <div className="container mx-auto px-4 text-center">
                 <h2 className="text-3xl font-bold sm:text-5xl">{t("Key Features")}</h2>
                 <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
