@@ -1,84 +1,101 @@
 import React, { useState } from "react";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "../Backend/firebase";
 import axios from "axios";
 
 const AddPatient = ({ close }) => {
-    const [patientData, setPatientData] = useState({
-      name: "",
-      age: "",
-      heartRate: "",
-      systolicBP: "",
-      diastolicBP: "",
-      respiratoryRate: "",
-      oxygenSaturation: "",
-      temperature: "",
-      painLevel: "",
-      consciousnessLevel: "",
-      symptoms: "",
-      ecgAbnormality: "",
-      xrayFindings: "",
-      ctScanFindings: "",
-      predictedDisease: "",
-      triageLevel: "",
-      suggestedTreatment: "",
-    });
+  const [patientData, setPatientData] = useState({
+    name: "",
+    age: "",
+    heartRate: "",
+    systolicBP: "",
+    diastolicBP: "",
+    respiratoryRate: "",
+    oxygenSaturation: "",
+    temperature: "",
+    painLevel: "",
+    consciousnessLevel: "",
+    symptoms: "",
+    ecgAbnormality: "",
+    xrayFindings: "",
+    ctScanFindings: "",
+    predictedDisease: "",
+    triageLevel: "",
+    suggestedTreatment: "",
+  });
+
+  const handleChange = (e) => {
+    setPatientData({ ...patientData, [e.target.name]: e.target.value });
+  };
+
+  const handleAddPatient = async (e) => {
+    e.preventDefault();
   
-    const handleChange = (e) => {
-      setPatientData({ ...patientData, [e.target.name]: e.target.value });
-    };
+    try {
+      // Prepare the features array based on form data
+      const features = [
+        patientData.heartRate,
+        patientData.oxygenSaturation,
+        patientData.respiratoryRate,
+        patientData.systolicBP,
+        patientData.diastolicBP,
+        patientData.ecgAbnormality,
+        patientData.xrayFindings,
+        patientData.ctScanFindings,
+        patientData.age,
+        patientData.temperature,
+        patientData.painLevel,
+        patientData.consciousnessLevel,
+        patientData.symptoms,
+      ];
   
-    const handleAddPatient = async (e) => {
-      e.preventDefault();
-    
-      try {
-        // Prepare the features array based on form data
-        const features = [
-          patientData.heartRate,
-          patientData.oxygenSaturation,
-          patientData.respiratoryRate,
-          patientData.systolicBP,
-          patientData.diastolicBP,
-          patientData.ecgAbnormality,
-          patientData.xrayFindings,
-          patientData.ctScanFindings,
-          patientData.age,
-          patientData.temperature,
-          patientData.painLevel,
-          patientData.consciousnessLevel,
-          patientData.symptoms,
-        ];
-    
-        // Post request to the backend API
-        const response = await axios.post(
-          "http://127.0.0.1:5000/predict", 
-          { features }
-        );
-        console.log("Prediction Response: ", response.data);
+      // Post request to the backend API
+      const response = await axios.post("http://127.0.0.1:5000/predict", {
+        features,
+      });
+      console.log("Prediction Response: ", response.data);
   
-        if (!response.data) {
-          throw new Error("No data received from the API");
-        }
-  
-        // Update patientData with prediction results
-        const updatedPatientData = {
-          ...patientData,
-          predictedDisease: response.data.disease,
-          triageLevel: response.data.triageLevel,
-          suggestedTreatment: response.data.treatment,
-        };
-    
-        // Optionally add to Firebase
-        const docRef = await addDoc(collection(db, "patients"), patientData);
-        console.log("Patient added with ID:", docRef.id);
-        
-        alert("Patient added and prediction received!");
-        close(); // Close the modal after success
-      } catch (error) {
-        console.error("Error during request:", error.response ? error.response.data : error.message);
-        alert("Error during patient addition or prediction request.");
+      if (!response.data) {
+        throw new Error("No data received from the API");
       }
-    };
+
+      // Access each value from the response data
+        const predictedDisease = response.data["Predicted Disease"];
+        const suggestedTreatment = response.data["Suggested Treatment"];
+        const triageLevel = response.data["Triage Level"];
+
+        // You can now use these values in your code
+        console.log(predictedDisease); // Output: Severe Trauma
+        console.log(suggestedTreatment); // Output: Ventilation Support - 5L/min
+        console.log(triageLevel); // Output: Critical
+  
+      // Check for missing or invalid prediction data
+      const updatedPatientData = {
+        ...patientData,
+        predictedDisease: predictedDisease, // Default to "Unknown" if undefined
+        triageLevel: suggestedTreatment, // Default to "Unknown" if undefined
+        suggestedTreatment: triageLevel || "No treatment provided", // Default if undefined
+      };
+  
+      // Add the patient to Firebase
+      const docRef = await addDoc(collection(db, "patients"), patientData);
+      console.log("Patient added with ID:", docRef.id);
+  
+      // Update the patient document with the prediction data
+      const patientDocRef = doc(db, "patients", docRef.id);
+      await updateDoc(patientDocRef, updatedPatientData); // Update the existing patient document with prediction data
+  
+      alert("Patient added and prediction received!");
+      close(); // Close the modal after success
+    } catch (error) {
+      console.error(
+        "Error during request:",
+        error.response ? error.response.data : error.message
+      );
+      alert("Error during patient addition or prediction request.");
+    }
+  };
+  
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
