@@ -7,6 +7,10 @@ import AddAmbulance from "./AddAmbulance";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import axios from "axios";
 import TreatmentPopup from "./TreatmentPopup";
+import { Link } from "react-router-dom";
+import { deleteDoc } from "firebase/firestore";
+import AddStaff from "./AddStaff";
+
 
 const Dashboard = () => {
   const [hospitalName, setHospitalName] = useState("Hospital Dashboard");
@@ -115,9 +119,27 @@ const Dashboard = () => {
     }
   };
 
+  const handleDeletePatient = async (patientId) => {
+    if (!window.confirm("Are you sure you want to delete this patient?")) return;
+  
+    try {
+      await deleteDoc(doc(db, "patients", patientId)); 
+      setPatients((prevPatients) =>
+        prevPatients.filter((patient) => patient.id !== patientId)
+      );
+      alert("Patient deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting patient:", error);
+      alert("Failed to delete patient.");
+    }
+  };
+
   return (
     <div className="p-5">
+    <div className="flex justify-between">
       <h1 className="text-3xl font-bold">Welcome, {hospitalName}!</h1>
+      <Link to="/" className="bg-red-400 rounded-md  px-3 py-2 text-white font-bold hover:bg-red-600">Logout <i class="fa-solid fa-right-from-bracket"></i></Link>
+      </div>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-4 gap-5 my-5">
@@ -136,25 +158,25 @@ const Dashboard = () => {
           count={staff.length}
           color="bg-green-500"
         />
-        <StatCard title="Available Beds" count={beds} color="bg-yellow-500" />
+        <StatCard title="Available Beds" count="150" color="bg-yellow-500" />
       </div>
 
       {/* Open Pop-up Forms */}
       <div className="flex gap-5 my-5">
         <button
-          className="bg-blue-500 text-white px-5 py-2 rounded"
+          className="bg-blue-500 text-white px-5 py-2 rounded cursor-pointer"
           onClick={() => setShowPatientForm(true)}
         >
           Add Patient
         </button>
         <button
-          className="bg-red-500 text-white px-5 py-2 rounded"
+          className="bg-red-500 text-white px-5 py-2 rounded cursor-pointer"
           onClick={() => setShowAmbulanceForm(true)}
         >
           Add Ambulance
         </button>
         <button
-          className="bg-green-500 text-white px-5 py-2 rounded"
+          className="bg-green-500 text-white px-5 py-2 rounded cursor-pointer"
           onClick={() => setShowStaffForm(true)}
         >
           Add Staff
@@ -217,11 +239,11 @@ const Dashboard = () => {
                           : "bg-green-100 text-green-800"
                       }`}
                     >
-                      {patient.triageLevel || "Unknown"}
+                      {patient.suggestedTreatment || "Unknown"}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {patient.suggestedTreatment || "No treatment suggested"}
+                    {patient.triageLevel|| "No treatment suggested"}
                   </td>
                 </tr>
               ))
