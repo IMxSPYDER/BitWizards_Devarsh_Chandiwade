@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
-import { db, auth } from "../Backend/firebase"; // Ensure correct import
+import { db, auth } from "../Backend/firebase"; 
 import { onAuthStateChanged } from "firebase/auth";
 import { Pie } from "react-chartjs-2";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import { Bar } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from "chart.js";
 import AddPatient from "./AddPatient";
 import AddAmbulance from "./AddAmbulance";
 import TreatmentPopup from "./TreatmentPopup";
 import { Link } from "react-router-dom";
 import { deleteDoc } from "firebase/firestore";
 import AddStaff from "./AddStaff";
+import axios from "axios"; // Import axios to make POST requests
 
-
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 
 const Dashboard = () => {
   const [hospitalName, setHospitalName] = useState("");
@@ -41,6 +42,17 @@ const Dashboard = () => {
       {
         data: [],
         backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#FF9F40", "#9966FF"],
+      },
+    ],
+  });
+
+  const [resourceData, setResourceData] = useState({
+    labels: ["Beds", "Doctors", "Oxygen Cylinder", "PPEkits", "Ventilator"],
+    datasets: [
+      {
+        label: "Resources Requirement",
+        data: [],
+        backgroundColor: ["#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF"],
       },
     ],
   });
@@ -106,15 +118,40 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, [patients]); // Trigger this whenever 'patients' changes
+  }, [patients]);
 
-  const [selectedTreatment, setSelectedTreatment] = useState(null);
+  // Fetch resource data from API on load
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        const response = await axios.post("http://127.0.0.1:5001/predict", {
+          disease: "Covid", 
+          patients: 100,
+          severity: 3,
+        });
+        
+        const { Beds, Doctors, "Oxygen Cylinder": OxygenCylinder, PPEkits, Ventilator } = response.data;
+        
+        setResourceData((prevState) => ({
+          ...prevState,
+          datasets: [
+            {
+              ...prevState.datasets[0],
+              data: [Beds, Doctors, OxygenCylinder, PPEkits, Ventilator],
+            },
+          ],
+        }));
+      } catch (error) {
+        console.error("Error fetching resource data:", error);
+      }
+    };
 
-  
+    fetchResources();
+  }, []);
 
   const handleDeletePatient = async (patientId) => {
     if (!window.confirm("Are you sure you want to delete this patient?")) return;
-  
+
     try {
       await deleteDoc(doc(db, "patients", patientId)); 
       setPatients((prevPatients) =>
@@ -129,9 +166,11 @@ const Dashboard = () => {
 
   return (
     <div className="p-5">
-    <div className="flex justify-between">
-      <h1 className="text-3xl font-bold">Welcome, {hospitalName}!</h1>
-      <Link to="/" className="bg-red-400 rounded-md  px-3 py-2 text-white font-bold hover:bg-red-600">Logout <i class="fa-solid fa-right-from-bracket"></i></Link>
+      <div className="flex justify-between">
+        <h1 className="text-3xl font-bold">Welcome, {hospitalName}!</h1>
+        <Link to="/" className="bg-red-400 rounded-md px-3 py-2 text-white font-bold hover:bg-red-600">
+          Logout <i className="fa-solid fa-right-from-bracket"></i>
+        </Link>
       </div>
 
       {/* Stats Overview */}
@@ -142,10 +181,19 @@ const Dashboard = () => {
         <StatCard title="Available Beds" count={"150"} color="bg-yellow-500" smalls={"+15% from yesterday"}/>
       </div>
 
-      {/* Pie Chart for Disease Distribution */}
-      <div className="my-5" style={{ width: "30%" }}>
-        <h2 className="text-2xl font-bold mb-3">Disease Distribution</h2>
-        <Pie data={diseaseData} />
+      {/* Charts Section */}
+      <div className="flex justify-between items-start gap-5 my-20">
+        {/* Pie Chart for Disease Distribution */}
+        <div className="w-2/6">
+          <h2 className="text-2xl font-bold mb-3">Disease Distribution</h2>
+          <Pie data={diseaseData} />
+        </div>
+
+        {/* Bar Graph for Resource Availability */}
+        <div className="w-3/6">
+          <h2 className="text-2xl font-bold mb-3">Resource Requirement</h2>
+          <Bar data={resourceData} />
+        </div>
       </div>
 
       {/* Pop-up Forms */}
@@ -176,38 +224,11 @@ const Dashboard = () => {
           <tbody className="divide-y divide-gray-200">
             {currentPatients.length > 0 ? (
               currentPatients.map((patient, index) => (
-                <tr
-                  key={index}
-                  className="bg-white hover:bg-gray-50 cursor-pointer"
-                  onClick={() => handlePatientClick(patient)}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap flex items-center">
-                    <div className="h-10 w-10 flex items-center justify-center bg-gray-300 text-gray-700 font-semibold rounded-full">
-                      {patient.name ? patient.name.split(" ").map((n) => n[0]).join("") : "?"}
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">{patient.name}</p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {patient.predictedDisease || "No disease detected"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-3 py-1 text-xs font-medium rounded-full ${
-                        patient.painLevel >= 8
-                          ? "bg-red-100 text-red-800"
-                          : patient.painLevel >= 4
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-green-100 text-green-800"
-                      }`}
-                    >
-                      {patient.suggestedTreatment || "Unknown"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {patient.triageLevel|| "No treatment suggested"}
-                  </td>
+                <tr key={index}>
+                  <td className="px-6 py-4">{patient.name}</td>
+                  <td className="px-6 py-4">{patient.predictedDisease}</td>
+                  <td className="px-6 py-4">{patient.triageLevel}</td>
+                  <td className="px-6 py-4">{patient.suggestedTreatment}</td>
                 </tr>
               ))
             ) : (
@@ -223,21 +244,11 @@ const Dashboard = () => {
 
       {/* Pagination Controls */}
       <div className="flex justify-between mt-4">
-        <button
-          className={`px-4 py-2 bg-gray-300 text-gray-700 rounded ${currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""}`}
-          onClick={() => setCurrentPage(currentPage - 1)}
-          disabled={currentPage === 1}
-        >
+        <button className="px-4 py-2 bg-gray-300 text-gray-700 rounded" onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1}>
           Previous
         </button>
-        <span className="px-4 py-2">
-          Page {currentPage} of {totalPages}
-        </span>
-        <button
-          className={`px-4 py-2 bg-gray-300 text-gray-700 rounded ${currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""}`}
-          onClick={() => setCurrentPage(currentPage + 1)}
-          disabled={currentPage === totalPages}
-        >
+        <span className="px-4 py-2">Page {currentPage} of {totalPages}</span>
+        <button className="px-4 py-2 bg-gray-300 text-gray-700 rounded" onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages}>
           Next
         </button>
       </div>
@@ -246,7 +257,6 @@ const Dashboard = () => {
       {showPatientForm && <AddPatient close={() => setShowPatientForm(false)} />}
       {showAmbulanceForm && <AddAmbulance close={() => setShowAmbulanceForm(false)} />}
       {showStaffForm && <AddStaff close={() => setShowStaffForm(false)} />}
-      {selectedTreatment && <TreatmentPopup treatment={selectedTreatment} close={() => setSelectedTreatment(null)} />}
     </div>
   );
 };

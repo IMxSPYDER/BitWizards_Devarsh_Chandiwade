@@ -2,8 +2,10 @@ from flask import Flask, request, jsonify
 import joblib
 import numpy as np
 import pandas as pd
+from flask_cors import CORS  # Import CORS
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all domains (or restrict it to specific ones)
 
 # Load model, scaler, OneHotEncoder, and training features
 model = joblib.load("resource_prediction_model_gb.pkl")
@@ -58,4 +60,4 @@ def predict():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=5001)

@@ -14,8 +14,8 @@ CORS(app)
 
 # Load the model, scaler, and label encoders
 model = tf.keras.models.load_model('multi_output_model.h5')
-scaler = joblib.load('scaler.pkl')
-label_encoders = joblib.load('label_encoders.pkl')  # This should be a dictionary of label encoders
+scaler = joblib.load('scaler2.pkl')
+label_encoders = joblib.load('label_encoders2.pkl')  # This should be a dictionary of label encoders
 
 # Endpoint for prediction
 @app.route('/predict', methods=['POST'])
