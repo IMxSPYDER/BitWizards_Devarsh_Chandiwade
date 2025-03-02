@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db, auth } from "../Backend/firebase"; // Ensure correct import
 import { onAuthStateChanged } from "firebase/auth";
+import { Pie } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import AddPatient from "./AddPatient";
 import AddAmbulance from "./AddAmbulance";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import axios from "axios";
 import TreatmentPopup from "./TreatmentPopup";
 import { Link } from "react-router-dom";
 import { deleteDoc } from "firebase/firestore";
 import AddStaff from "./AddStaff";
 
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const Dashboard = () => {
   const [hospitalName, setHospitalName] = useState("Hospital Dashboard");
@@ -32,6 +34,16 @@ const Dashboard = () => {
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
+
+  const [diseaseData, setDiseaseData] = useState({
+    labels: [],
+    datasets: [
+      {
+        data: [],
+        backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#FF9F40", "#9966FF"],
+      },
+    ],
+  });
 
   // Fetch Hospital Name
   useEffect(() => {
@@ -59,8 +71,30 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       const patientSnapshot = await getDocs(collection(db, "patients"));
-      setPatients(patientSnapshot.docs.map((doc) => doc.data()));
+      const patientData = patientSnapshot.docs.map((doc) => doc.data());
+      setPatients(patientData);
 
+      const diseases = ["COVID-19", "Stroke", "Sepsis", "Pneumonia", "Severe_Trauma", "Heart_Failure"];
+      const diseaseCounts = diseases.reduce((acc, disease) => {
+        acc[disease] = patientData.filter(
+          (patient) => patient.predictedDisease === disease
+        ).length;
+        return acc;
+      }, {});
+
+      // Update the pie chart data
+      setDiseaseData((prevState) => ({
+        ...prevState,
+        labels: diseases,
+        datasets: [
+          {
+            ...prevState.datasets[0],
+            data: Object.values(diseaseCounts),
+          },
+        ],
+      }));
+
+      // Fetch ambulances, staff, and beds
       const ambulanceSnapshot = await getDocs(collection(db, "ambulances"));
       setAmbulances(ambulanceSnapshot.docs.map((doc) => doc.data()));
 
@@ -70,54 +104,13 @@ const Dashboard = () => {
       const bedsSnapshot = await getDocs(collection(db, "beds"));
       setBeds(bedsSnapshot.docs.length);
     };
+
     fetchData();
-  }, []);
-  // Import pop-up component
+  }, [patients]); // Trigger this whenever 'patients' changes
 
   const [selectedTreatment, setSelectedTreatment] = useState(null);
 
-  const handlePatientClick = async (patient) => {
-    const prompt = `
-        The following patient needs urgent medical attention. Suggest a treatment plan based on these vitals:
-
-        - **Heart Rate (bpm):** ${patient.heartRate}
-        - **Oxygen Saturation (%):** ${patient.oxygenSaturation}
-        - **Respiratory Rate (breaths per min):** ${patient.respiratoryRate}
-        - **Systolic Blood Pressure (mmHg):** ${patient.systolicBloodPressure}
-        - **Diastolic Blood Pressure (mmHg):** ${patient.diastolicBloodPressure}
-        - **ECG Abnormality (0 = Normal, 1 = Abnormal):** ${patient.ecgAbnormality}
-        - **X-ray Findings (0 = Normal, 1 = Minor Issue, 2 = Critical Issue):** ${patient.xRayFindings}
-        - **CT Scan Findings (0 = Normal, 1 = Minor Issue, 2 = Critical Issue):** ${patient.ctScanFindings}
-        - **Age:** ${patient.age}
-        - **Temperature (°F):** ${patient.temperature}
-        - **Pain Level (1-10):** ${patient.painLevel}
-        - **Consciousness Level:** ${patient.consciousnessLevel}
-        - **Symptoms:** ${patient.symptoms}
-
-        Provide a treatment recommendation based on this information.
-    `;
-
-    try {
-      const API_URL =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
-      const API_KEY = "AIzaSyC7S_WFAh3E0bpnkSPcRhRS_HEsdjmRxwI"; // Replace this with your actual API key
-
-      const genAI = new GoogleGenerativeAI(
-        "AIzaSyC7S_WFAh3E0bpnkSPcRhRS_HEsdjmRxwI"
-      );
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-      const response = await model.generateContent(prompt);
-      const treatmentText =
-        response.response.candidates[0].content.parts[0].text;
-      console.log(treatmentText);
-
-      setSelectedTreatment(treatmentText);
-    } catch (error) {
-      console.error("Error fetching treatment:", error);
-      setSelectedTreatment("Error fetching treatment. Please try again.");
-    }
-  };
+  
 
   const handleDeletePatient = async (patientId) => {
     if (!window.confirm("Are you sure you want to delete this patient?")) return;
@@ -143,42 +136,27 @@ const Dashboard = () => {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-4 gap-5 my-5">
-        <StatCard
-          title="Total Patients"
-          count={patients.length}
-          color="bg-blue-500"
-        />
-        <StatCard
-          title="Total Ambulances"
-          count={ambulances.length}
-          color="bg-red-500"
-        />
-        <StatCard
-          title="Total Staff"
-          count={staff.length}
-          color="bg-green-500"
-        />
-        <StatCard title="Available Beds" count="150" color="bg-yellow-500" />
+        <StatCard title="Total Patients" count={patients.length} color="bg-blue-500" />
+        <StatCard title="Total Ambulances" count={ambulances.length} color="bg-red-500" />
+        <StatCard title="Total Staff" count={staff.length} color="bg-green-500" />
+        <StatCard title="Available Beds" count={"150"} color="bg-yellow-500" />
       </div>
 
-      {/* Open Pop-up Forms */}
+      {/* Pie Chart for Disease Distribution */}
+      <div className="my-5" style={{ width: "30%" }}>
+        <h2 className="text-2xl font-bold mb-3">Disease Distribution</h2>
+        <Pie data={diseaseData} />
+      </div>
+
+      {/* Pop-up Forms */}
       <div className="flex gap-5 my-5">
-        <button
-          className="bg-blue-500 text-white px-5 py-2 rounded cursor-pointer"
-          onClick={() => setShowPatientForm(true)}
-        >
+        <button className="bg-blue-500 text-white px-5 py-2 rounded" onClick={() => setShowPatientForm(true)}>
           Add Patient
         </button>
-        <button
-          className="bg-red-500 text-white px-5 py-2 rounded cursor-pointer"
-          onClick={() => setShowAmbulanceForm(true)}
-        >
+        <button className="bg-red-500 text-white px-5 py-2 rounded" onClick={() => setShowAmbulanceForm(true)}>
           Add Ambulance
         </button>
-        <button
-          className="bg-green-500 text-white px-5 py-2 rounded cursor-pointer"
-          onClick={() => setShowStaffForm(true)}
-        >
+        <button className="bg-green-500 text-white px-5 py-2 rounded" onClick={() => setShowStaffForm(true)}>
           Add Staff
         </button>
       </div>
@@ -189,18 +167,10 @@ const Dashboard = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase">
-                Patient Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase">
-                Predicted Disease
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase">
-                Triage Level
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase">
-                Suggested Treatment
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase">Patient Name</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase">Predicted Disease</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase">Triage Level</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase">Suggested Treatment</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -213,17 +183,10 @@ const Dashboard = () => {
                 >
                   <td className="px-6 py-4 whitespace-nowrap flex items-center">
                     <div className="h-10 w-10 flex items-center justify-center bg-gray-300 text-gray-700 font-semibold rounded-full">
-                      {patient.name
-                        ? patient.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                        : "?"}
+                      {patient.name ? patient.name.split(" ").map((n) => n[0]).join("") : "?"}
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">
-                        {patient.name}
-                      </p>
+                      <p className="text-sm font-medium text-gray-900">{patient.name}</p>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -261,9 +224,7 @@ const Dashboard = () => {
       {/* Pagination Controls */}
       <div className="flex justify-between mt-4">
         <button
-          className={`px-4 py-2 bg-gray-300 text-gray-700 rounded ${
-            currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
-          }`}
+          className={`px-4 py-2 bg-gray-300 text-gray-700 rounded ${currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""}`}
           onClick={() => setCurrentPage(currentPage - 1)}
           disabled={currentPage === 1}
         >
@@ -273,9 +234,7 @@ const Dashboard = () => {
           Page {currentPage} of {totalPages}
         </span>
         <button
-          className={`px-4 py-2 bg-gray-300 text-gray-700 rounded ${
-            currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
-          }`}
+          className={`px-4 py-2 bg-gray-300 text-gray-700 rounded ${currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""}`}
           onClick={() => setCurrentPage(currentPage + 1)}
           disabled={currentPage === totalPages}
         >
@@ -284,24 +243,14 @@ const Dashboard = () => {
       </div>
 
       {/* Pop-up Forms */}
-      {showPatientForm && (
-        <AddPatient close={() => setShowPatientForm(false)} />
-      )}
-      {showAmbulanceForm && (
-        <AddAmbulance close={() => setShowAmbulanceForm(false)} />
-      )}
+      {showPatientForm && <AddPatient close={() => setShowPatientForm(false)} />}
+      {showAmbulanceForm && <AddAmbulance close={() => setShowAmbulanceForm(false)} />}
       {showStaffForm && <AddStaff close={() => setShowStaffForm(false)} />}
-      {selectedTreatment && (
-        <TreatmentPopup
-          treatment={selectedTreatment}
-          close={() => setSelectedTreatment(null)}
-        />
-      )}
+      {selectedTreatment && <TreatmentPopup treatment={selectedTreatment} close={() => setSelectedTreatment(null)} />}
     </div>
   );
 };
 
-// Reusable Stat Card Component
 const StatCard = ({ title, count, color }) => (
   <div className={`p-5 rounded-md text-white ${color}`}>
     <h2 className="text-xl">{title}</h2>
