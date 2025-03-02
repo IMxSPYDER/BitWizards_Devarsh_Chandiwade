@@ -167,36 +167,11 @@ const Dashboard = () => {
   return (
     <div className="p-5">
       <div className="flex justify-between">
+        <div>
         <h1 className="text-3xl font-bold">Welcome, {hospitalName}!</h1>
-        <Link to="/" className="bg-red-400 rounded-md px-3 py-2 text-white font-bold hover:bg-red-600">
-          Logout <i className="fa-solid fa-right-from-bracket"></i>
-        </Link>
-      </div>
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-4 gap-5 my-5">
-        <StatCard title="Total Patients" count={patients.length} color="bg-blue-500" smalls={"+15% from yesterday"}/>
-        <StatCard title="Total Ambulances" count={ambulances.length} color="bg-red-500" smalls={"+15% from yesterday"}/>
-        <StatCard title="Total Staff" count={staff.length} color="bg-green-500" smalls={"+15% from yesterday"}/>
-        <StatCard title="Available Beds" count={"150"} color="bg-yellow-500" smalls={"+15% from yesterday"}/>
-      </div>
-
-      {/* Charts Section */}
-      <div className="flex justify-between items-start gap-5 my-20">
-        {/* Pie Chart for Disease Distribution */}
-        <div className="w-2/6">
-          <h2 className="text-2xl font-bold mb-3">Disease Distribution</h2>
-          <Pie data={diseaseData} />
         </div>
-
-        {/* Bar Graph for Resource Availability */}
-        <div className="w-3/6">
-          <h2 className="text-2xl font-bold mb-3">Resource Requirement</h2>
-          <Bar data={resourceData} />
-        </div>
-      </div>
-
-      {/* Pop-up Forms */}
+        {/* Pop-up Forms */}
+        <div className="flex items-center gap-4">
       <div className="flex gap-5 my-5">
         <button className="bg-blue-500 text-white px-5 py-2 rounded" onClick={() => setShowPatientForm(true)}>
           Add Patient
@@ -208,11 +183,29 @@ const Dashboard = () => {
           Add Staff
         </button>
       </div>
+        <Link to="/" className="bg-red-400 rounded-md px-3 py-2 text-white font-bold hover:bg-red-600">
+          Logout <i className="fa-solid fa-right-from-bracket"></i>
+        </Link>
+        </div>
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-4 gap-5 my-5">
+        <StatCard title="Total Patients" count={patients.length} color="bg-blue-500" smalls={"+15% from yesterday"}/>
+        <StatCard title="Total Ambulances" count={ambulances.length} color="bg-red-500" smalls={"+15% from yesterday"}/>
+        <StatCard title="Total Staff" count={staff.length} color="bg-green-500" smalls={"+15% from yesterday"}/>
+        <StatCard title="Available Beds" count={"150"} color="bg-yellow-500" smalls={"+15% from yesterday"}/>
+      </div>
+
+      
+
+
+      
 
       {/* Patient Table */}
       <h2 className="text-2xl font-bold mt-5 mb-3">Recent Patients</h2>
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
+      <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase">Patient Name</th>
@@ -224,11 +217,38 @@ const Dashboard = () => {
           <tbody className="divide-y divide-gray-200">
             {currentPatients.length > 0 ? (
               currentPatients.map((patient, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4">{patient.name}</td>
-                  <td className="px-6 py-4">{patient.predictedDisease}</td>
-                  <td className="px-6 py-4">{patient.triageLevel}</td>
-                  <td className="px-6 py-4">{patient.suggestedTreatment}</td>
+                <tr
+                  key={index}
+                  className="bg-white hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handlePatientClick(patient)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap flex items-center">
+                    <div className="h-10 w-10 flex items-center justify-center bg-gray-300 text-gray-700 font-semibold rounded-full">
+                      {patient.name ? patient.name.split(" ").map((n) => n[0]).join("") : "?"}
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">{patient.name}</p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {patient.predictedDisease || "No disease detected"}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-3 py-1 text-xs font-medium rounded-full ${
+                        patient.painLevel >= 8
+                          ? "bg-red-100 text-red-800"
+                          : patient.painLevel >= 4
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      {patient.suggestedTreatment || "Unknown"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {patient.triageLevel || "No treatment suggested"}
+                  </td>
                 </tr>
               ))
             ) : (
@@ -251,6 +271,22 @@ const Dashboard = () => {
         <button className="px-4 py-2 bg-gray-300 text-gray-700 rounded" onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages}>
           Next
         </button>
+      </div>
+
+      
+      {/* Charts Section */}
+      <div className="flex justify-center items-start gap-20 my-20">
+        {/* Pie Chart for Disease Distribution */}
+        <div className="w-2/6">
+          <h2 className="text-2xl font-bold mb-3">Disease Distribution</h2>
+          <Pie data={diseaseData} />
+        </div>
+
+        {/* Bar Graph for Resource Availability */}
+        <div className="w-3/6">
+          <h2 className="text-2xl font-bold mb-3">Resource Requirement</h2>
+          <Bar data={resourceData} />
+        </div>
       </div>
 
       {/* Pop-up Forms */}
