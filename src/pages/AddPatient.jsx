@@ -98,7 +98,7 @@ const AddPatient = ({ close }) => {
   
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+    <div className="fixed inset-0 bg-white/30 backdrop-blur-lg bg-opacity-50 flex justify-center items-center">
       <div className="bg-white h-[90%] overflow-auto p-5 rounded-md w-96">
         <h2 className="text-xl font-bold">Add Patient</h2>
         <form onSubmit={handleAddPatient}>

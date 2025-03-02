@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { db, auth } from "../Backend/firebase"; // Ensure correct import
 import { onAuthStateChanged } from "firebase/auth";
 import { Pie } from "react-chartjs-2";
@@ -7,11 +7,15 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import AddPatient from "./AddPatient";
 import AddAmbulance from "./AddAmbulance";
 import TreatmentPopup from "./TreatmentPopup";
+import { Link } from "react-router-dom";
+import { deleteDoc } from "firebase/firestore";
+import AddStaff from "./AddStaff";
+
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const Dashboard = () => {
-  const [hospitalName, setHospitalName] = useState("Hospital Dashboard");
+  const [hospitalName, setHospitalName] = useState("");
   const [patients, setPatients] = useState([]);
   const [ambulances, setAmbulances] = useState([]);
   const [staff, setStaff] = useState([]);
@@ -106,20 +110,36 @@ const Dashboard = () => {
 
   const [selectedTreatment, setSelectedTreatment] = useState(null);
 
-  const handlePatientClick = async (patient) => {
-    // ... Treatment fetch code
+  
+
+  const handleDeletePatient = async (patientId) => {
+    if (!window.confirm("Are you sure you want to delete this patient?")) return;
+  
+    try {
+      await deleteDoc(doc(db, "patients", patientId)); 
+      setPatients((prevPatients) =>
+        prevPatients.filter((patient) => patient.id !== patientId)
+      );
+      alert("Patient deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting patient:", error);
+      alert("Failed to delete patient.");
+    }
   };
 
   return (
     <div className="p-5">
+    <div className="flex justify-between">
       <h1 className="text-3xl font-bold">Welcome, {hospitalName}!</h1>
+      <Link to="/" className="bg-red-400 rounded-md  px-3 py-2 text-white font-bold hover:bg-red-600">Logout <i class="fa-solid fa-right-from-bracket"></i></Link>
+      </div>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-4 gap-5 my-5">
         <StatCard title="Total Patients" count={patients.length} color="bg-blue-500" />
         <StatCard title="Total Ambulances" count={ambulances.length} color="bg-red-500" />
         <StatCard title="Total Staff" count={staff.length} color="bg-green-500" />
-        <StatCard title="Available Beds" count={beds} color="bg-yellow-500" />
+        <StatCard title="Available Beds" count={"150"} color="bg-yellow-500" />
       </div>
 
       {/* Pie Chart for Disease Distribution */}
@@ -182,11 +202,11 @@ const Dashboard = () => {
                           : "bg-green-100 text-green-800"
                       }`}
                     >
-                      {patient.triageLevel || "Unknown"}
+                      {patient.suggestedTreatment || "Unknown"}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {patient.suggestedTreatment || "No treatment suggested"}
+                    {patient.triageLevel|| "No treatment suggested"}
                   </td>
                 </tr>
               ))
